@@ -15,6 +15,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with MyMediaLite.  If not, see <http://www.gnu.org/licenses/>.
 using System;
+using System.Collections.Generic;
 using MyMediaLite.DataType;
 
 namespace MyMediaLite.ItemRecommendation
@@ -39,6 +40,16 @@ namespace MyMediaLite.ItemRecommendation
 			}
 		}
 		private IBooleanMatrix user_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalUserAttributes
+		{
+			get { return this.additional_user_attributes; }
+			set {
+				this.additional_user_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_user_attributes;
 
 		///
 		public int NumUserAttributes { get; private set; }

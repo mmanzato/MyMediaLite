@@ -17,6 +17,7 @@
 //
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 using System.Linq;
 using MyMediaLite.DataType;
 
@@ -33,7 +34,7 @@ namespace MyMediaLite.Data
 		/// <param name="display_overlap">if set true, display the user/item overlap between train and test</param>
 		public static string Statistics(
 			this IRatings train, IRatings test = null,
-			IBooleanMatrix user_attributes = null, IBooleanMatrix item_attributes = null,
+			List<IBooleanMatrix> user_attributes = null, List<IBooleanMatrix> item_attributes = null,
 			bool display_overlap = false)
 		{
 			// training data stats
@@ -87,7 +88,7 @@ namespace MyMediaLite.Data
 		/// <param name="item_attributes">the item attributes</param>
 		public static string Statistics(
 			this IPosOnlyFeedback training_data, IPosOnlyFeedback test_data = null,
-			IBooleanMatrix user_attributes = null, IBooleanMatrix item_attributes = null)
+			List<IBooleanMatrix> user_attributes = null, List<IBooleanMatrix> item_attributes = null)
 		{
 			// training data stats
 			int num_users = training_data.AllUsers.Count;
@@ -114,21 +115,34 @@ namespace MyMediaLite.Data
 		/// <summary>Display statistics for user and item attributes</summary>
 		/// <param name="user_attributes">the user attributes</param>
 		/// <param name="item_attributes">the item attributes</param>
-		public static string Statistics(IBooleanMatrix user_attributes, IBooleanMatrix item_attributes)
+		public static string Statistics(List<IBooleanMatrix> user_attributes, List<IBooleanMatrix> item_attributes)
 		{
 			string s = string.Empty;
-			if (user_attributes != null)
+			if (user_attributes != null && user_attributes.Count > 0)
 			{
-				s += string.Format(
-					"{0} user attributes for {1} users, {2} assignments, {3} users with attribute assignments\n",
-					user_attributes.NumberOfColumns, user_attributes.NumberOfRows,
-					user_attributes.NumberOfEntries, user_attributes.NonEmptyRowIDs.Count);
+				s += string.Format("Main user attributes:\n");
+				for(int i = 0; i < user_attributes.Count; i++ )
+				{
+					s += string.Format(
+						"{0} user attributes for {1} users, {2} assignments, {3} users with attribute assignments\n",
+						user_attributes[i].NumberOfColumns, user_attributes[i].NumberOfRows,
+						user_attributes[i].NumberOfEntries, user_attributes[i].NonEmptyRowIDs.Count);	
+					if(i == 0) 
+						s += string.Format("Additional user attributes:\n");
+				}
+				
 			}
-			if (item_attributes != null)
-				s += string.Format(
-					"{0} item attributes for {1} items, {2} assignments, {3} items with attribute assignments\n",
-					item_attributes.NonEmptyColumnIDs.Count, item_attributes.NumberOfRows,
-					item_attributes.NumberOfEntries, item_attributes.NonEmptyRowIDs.Count);
+			if (item_attributes != null && item_attributes.Count > 0)
+				s += string.Format("Main item attributes:\n");
+				for(int i = 0; i < item_attributes.Count; i++ )
+				{
+					s += string.Format(
+						"{0} item attributes for {1} items, {2} assignments, {3} items with attribute assignments\n",
+						item_attributes[i].NonEmptyColumnIDs.Count, item_attributes[i].NumberOfRows,
+						item_attributes[i].NumberOfEntries, item_attributes[i].NonEmptyRowIDs.Count);
+					if(i == 0)
+						s += string.Format("Additional item attributes:\n");
+				}
 			return s;
 		}
 	}

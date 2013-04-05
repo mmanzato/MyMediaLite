@@ -41,6 +41,16 @@ namespace MyMediaLite.RatingPrediction
 			}
 		}
 		private IBooleanMatrix user_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalUserAttributes
+		{
+			get { return this.additional_user_attributes; }
+			set {
+				this.additional_user_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_user_attributes;
 
 		///
 		public int NumUserAttributes { get; private set; }

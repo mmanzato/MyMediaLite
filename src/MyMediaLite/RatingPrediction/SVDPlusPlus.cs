@@ -222,12 +222,12 @@ namespace MyMediaLite.RatingPrediction
 				items_rated_by_user = this.ItemsRatedByUser();
 
 			for (int user_id = 0; user_id <= MaxUserID; user_id++)
-				PrecomputeFactors(user_id);
+				PrecomputeUserFactors(user_id);
 		}
 
 		/// <summary>Precompute the factors for a given user</summary>
 		/// <param name='user_id'>the ID of the user</param>
-		protected void PrecomputeFactors(int user_id)
+		protected virtual void PrecomputeUserFactors(int user_id)
 		{
 			if (items_rated_by_user[user_id].Length == 0)
 				return;
@@ -264,7 +264,7 @@ namespace MyMediaLite.RatingPrediction
 			if (UpdateUsers)
 			{
 				base.RetrainUser(user_id);
-				PrecomputeFactors(user_id);
+				PrecomputeUserFactors(user_id);
 			}
 		}
 

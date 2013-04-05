@@ -53,6 +53,16 @@ namespace MyMediaLite.AttrToFactor
 		}
 		/// <summary>The matrix storing the user attributes</summary>
 		protected IBooleanMatrix user_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalUserAttributes
+		{
+			get { return this.additional_user_attributes; }
+			set {
+				this.additional_user_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_user_attributes;
 
 		///
 		public int NumUserAttributes { get; set; }

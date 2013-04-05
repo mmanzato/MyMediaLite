@@ -324,7 +324,7 @@ namespace MyMediaLite.RatingPrediction
 		/// <returns>a vector of latent factors</returns>
 		/// <param name='rated_items'>a list of (item ID, rating value) pairs</param>
 		protected virtual float[] FoldIn(IList<Tuple<int, float>> rated_items)
-		{
+		{			
 			var user_vector = new float[NumFactors];
 			user_vector.InitNormal(InitMean, InitStdDev);
 			rated_items.Shuffle();

@@ -15,6 +15,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with MyMediaLite.  If not, see <http://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using MyMediaLite.DataType;
 
 namespace MyMediaLite
@@ -30,5 +31,10 @@ namespace MyMediaLite
 		/// <value>The binary user attributes</value>
 		/// <remarks></remarks>
 		IBooleanMatrix UserAttributes { get; set; }
+		
+		/// <value>
+		/// Additional user attributes passed through command line arguments.
+		/// </value>
+		List<IBooleanMatrix> AdditionalUserAttributes { get; set; }
 	}
 }

@@ -52,7 +52,18 @@ namespace MyMediaLite.RatingPrediction
 				this.MaxItemID = Math.Max(MaxItemID, item_attributes.NumberOfRows - 1);
 			}
 		}
-		private IBooleanMatrix item_attributes;
+		///
+		protected IBooleanMatrix item_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalItemAttributes
+		{
+			get { return this.additional_item_attributes; }
+			set {
+				this.additional_item_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_item_attributes;
 
 		///
 		public int NumItemAttributes { get; private set; }
@@ -80,6 +91,10 @@ namespace MyMediaLite.RatingPrediction
 			for (int i = 0; i < ratings.CountByItem.Count; i++)
 				if (ratings.CountByItem[i] == 0)
 					q.SetRowToOneValue(i, 0);
+			for (int i = ratings.CountByItem.Count; i <= MaxItemID; i++)
+			{
+				q.SetRowToOneValue(i, 0);
+			}
 		}
 
 		///

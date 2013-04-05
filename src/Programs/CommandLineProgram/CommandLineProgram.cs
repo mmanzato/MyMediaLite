@@ -44,8 +44,8 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 	protected string save_item_mapping_file;
 	protected string load_user_mapping_file;
 	protected string load_item_mapping_file;
-	protected string user_attributes_file;
-	protected string item_attributes_file;
+	protected string user_attributes_file = null;
+	protected string item_attributes_file = null;
 	protected string user_relations_file;
 	protected string item_relations_file;
 	protected string prediction_file;
@@ -77,8 +77,8 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 	protected IMapping item_mapping = new Mapping();
 
 	// user and item attributes
-	protected IBooleanMatrix user_attributes;
-	protected IBooleanMatrix item_attributes;
+	protected List<IBooleanMatrix> user_attributes = new List<IBooleanMatrix>();
+	protected List<IBooleanMatrix> item_attributes = new List<IBooleanMatrix>();
 
 	// time statistics
 	protected List<double> training_time_stats = new List<double>();
@@ -182,8 +182,8 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 			{ "recommender=",         v              => method               = v },
 			{ "recommender-options=", v              => recommender_options += " " + v },
 			{ "data-dir=",            v              => data_dir             = v },
-			{ "user-attributes=",     v              => user_attributes_file = v },
-			{ "item-attributes=",     v              => item_attributes_file = v },
+			{ "user-attributes=",     v              => user_attributes_file += " " + v },
+			{ "item-attributes=",     v              => item_attributes_file += " " + v },
 			{ "user-relations=",      v              => user_relations_file  = v },
 			{ "item-relations=",      v              => item_relations_file  = v },
 			{ "save-model=",          v              => save_model_file      = v },
@@ -259,15 +259,45 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 
 		// user attributes
 		if (user_attributes_file != null)
-			user_attributes = AttributeData.Read(Path.Combine(data_dir, user_attributes_file), user_mapping);
+		{
+			string[] files = user_attributes_file.Split(' ');
+			foreach(string file in files) 
+			{
+				if(file.Length > 0) 
+				{
+					user_attributes.Add(AttributeData.Read(Path.Combine(data_dir, file), user_mapping));
+				}
+			}			
+		}
 		if (recommender is IUserAttributeAwareRecommender)
-			((IUserAttributeAwareRecommender)recommender).UserAttributes = user_attributes;
+		{
+			((IUserAttributeAwareRecommender)recommender).UserAttributes = user_attributes[0];		
+			if(user_attributes.Count > 1)
+				((IUserAttributeAwareRecommender)recommender).AdditionalUserAttributes = user_attributes.GetRange(1, user_attributes.Count - 1);
+			else 
+				((IUserAttributeAwareRecommender)recommender).AdditionalUserAttributes = null;
+		}
 
 		// item attributes
 		if (item_attributes_file != null)
-			item_attributes = AttributeData.Read(Path.Combine(data_dir, item_attributes_file), item_mapping);
+		{
+			string[] files = item_attributes_file.Split(' ');
+			foreach(string file in files) 
+			{
+				if(file.Length > 0) 
+				{
+					item_attributes.Add(AttributeData.Read(Path.Combine(data_dir, file), item_mapping));
+				}
+			}			
+		}
 		if (recommender is IItemAttributeAwareRecommender)
-			((IItemAttributeAwareRecommender)recommender).ItemAttributes = item_attributes;
+		{
+			((IItemAttributeAwareRecommender)recommender).ItemAttributes = item_attributes[0];
+			if(item_attributes.Count > 1)
+				((IItemAttributeAwareRecommender)recommender).AdditionalItemAttributes = item_attributes.GetRange(1, item_attributes.Count - 1);
+			else 
+				((IItemAttributeAwareRecommender)recommender).AdditionalItemAttributes = null;
+		}
 
 		// user relation
 		if (recommender is IUserRelationAwareRecommender)

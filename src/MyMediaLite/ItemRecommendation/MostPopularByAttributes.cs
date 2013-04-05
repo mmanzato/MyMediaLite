@@ -60,6 +60,16 @@ namespace MyMediaLite.ItemRecommendation
 			}
 		}
 		private IBooleanMatrix item_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalItemAttributes
+		{
+			get { return this.additional_item_attributes; }
+			set {
+				this.additional_item_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_item_attributes;
 
 		///
 		public int NumItemAttributes { get; private set; }

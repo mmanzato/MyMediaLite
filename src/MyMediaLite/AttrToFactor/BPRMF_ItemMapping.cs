@@ -52,6 +52,16 @@ namespace MyMediaLite.AttrToFactor
 		}
 		/// <summary>The matrix storing the item attributes</summary>
 		protected IBooleanMatrix item_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalItemAttributes
+		{
+			get { return this.additional_item_attributes; }
+			set {
+				this.additional_item_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_item_attributes;
 
 		///
 		public int NumItemAttributes { get;	set; }
