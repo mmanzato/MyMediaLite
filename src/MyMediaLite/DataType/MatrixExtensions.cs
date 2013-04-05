@@ -264,7 +264,7 @@ namespace MyMediaLite.DataType
 
 			return result;
 		}
-
+		
 		/// <summary>Compute the scalar product of a matrix row with the difference vector of two other matrix rows</summary>
 		/// <param name="matrix1">the first matrix</param>
 		/// <param name="i">the first row ID</param>

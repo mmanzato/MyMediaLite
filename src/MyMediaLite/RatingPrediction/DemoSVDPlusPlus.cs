@@ -65,7 +65,7 @@ namespace MyMediaLite.RatingPrediction
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MyMediaLite.RatingPrediction.DemoSVDPlusPlus"/> class.
 		/// </summary>
-		public DemoSVDPlusPlus ()
+		public DemoSVDPlusPlus () : base()
 		{
 		}
 		

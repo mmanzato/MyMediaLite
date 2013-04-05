@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>MyMediaLite</RootNamespace>
     <AssemblyName>MyMediaLite</AssemblyName>
-    <ReleaseVersion>3.07</ReleaseVersion>
+    <ReleaseVersion>3.06</ReleaseVersion>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -246,6 +246,7 @@
     <Compile Include="RatingPrediction\GSVDPlusPlus.cs" />
     <Compile Include="Eval\RatingBasedRankingCrossValidation.cs" />
     <Compile Include="RatingPrediction\DemoSVDPlusPlus.cs" />
+    <Compile Include="RatingPrediction\DemoUserSimilarity.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)/Microsoft.CSharp.targets" />
   <ItemGroup>
