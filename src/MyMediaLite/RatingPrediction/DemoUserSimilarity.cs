@@ -102,10 +102,8 @@ namespace MyMediaLite.RatingPrediction
 		///
 		public override void Train()
 		{
-			//Console.WriteLine("Initing model...");
 			InitModel();
 			global_bias = ratings.Average;
-			//Console.WriteLine("Computing correlations...");
 			((IBinaryDataCorrelationMatrix) correlation).ComputeCorrelations(BinaryDataMatrix);
 			
 			Matrix<float> aux_user_factors = new Matrix<float>(MaxUserID + 1, NumFactors);
@@ -113,19 +111,14 @@ namespace MyMediaLite.RatingPrediction
 			aux_user_factors.Init(0);
 			aux_item_factors.Init(0);				
 			
-			//Console.Write("Computing Loss...");
 			float cost_t = ComputeLoss(user_factors, item_factors);
-			//Console.WriteLine("cost_t: " + cost_t);
 			
-			//Console.WriteLine("Entering external loop...");
 			int iter = 0;
 			float learning_rate = 0.1f;
 			
 			while(iter < NumIter) 
 			{
-				Console.WriteLine("Iter: " + iter + " cost_t: " + cost_t);
-				//learning_rate *= 2;
-				learning_rate = 1;
+				learning_rate *= 2;				
 				ComputeGradients();
 				
 				
@@ -163,17 +156,21 @@ namespace MyMediaLite.RatingPrediction
 							aux_item_factors[i, f] = item_factors[i, f] - learning_rate * item_gradients[i, f];
 						}
 					}
-					cost_aux = ComputeLoss(aux_user_factors, aux_item_factors);
-					Console.WriteLine("cost_aux: " + cost_aux);
+					float cost_aux2 = ComputeLoss(aux_user_factors, aux_item_factors);
+					if(cost_aux == cost_aux2)
+					{
+						break;	
+					}
+					else 
+					{
+						cost_aux = cost_aux2;	
+					}
 				}
 				
-				//Console.WriteLine("Updating factors...");
 				for(int u = 0; u < MaxUserID + 1; u++)
 				{
 					for(int f = 0; f < NumFactors; f++)
 					{
-						//if(u ==0)
-						//	Console.WriteLine("Updating user_factors[0, {0}] = {1} - {2} * {3}", f, user_factors[u, f], learning_rate, user_gradients[u, f]);
 						user_factors[u, f] = aux_user_factors[u, f];
 					}
 				}
@@ -185,7 +182,7 @@ namespace MyMediaLite.RatingPrediction
 					}
 				}
 				float delta = (cost_t - cost_aux) / cost_t;
-				Console.WriteLine("delta: " + delta);
+				Console.WriteLine("Iter: " + iter + " delta: " + delta);
 				
 				if(delta <= StopCondition)
 				{
@@ -209,12 +206,13 @@ namespace MyMediaLite.RatingPrediction
 		/// <returns>the predicted rating</returns>
 		public override float Predict(int user_id, int item_id)
 		{
-			if (user_id >= user_factors.dim1)
-				return global_bias;
-			if (item_id >= item_factors.dim1)
-				return global_bias;
-
-			return DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+			float result = 0;
+			if (user_id >= user_factors.dim1 || item_id >= item_factors.dim1)
+				result = global_bias;
+			else
+				result = DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+						
+			return result;
 		}
 		
 		private float ComputeLoss(Matrix<float> user_factors, Matrix<float> item_factors)
@@ -234,19 +232,19 @@ namespace MyMediaLite.RatingPrediction
 			
 			float second_sum = 0;
 			IList<int> user_list = ratings.AllUsers;
-			//for(int udx = 0; udx < user_list.Count - 1; udx++)
-			/*foreach(int u in user_list)
+			for(int udx = 0; udx < user_list.Count - 1; udx++)
+			//foreach(int u in user_list)
 			{
-				foreach(int v in user_list)
+				int u = user_list[udx];
+				for(int vdx = udx + 1; vdx < user_list.Count; vdx++)
+				//foreach(int v in user_list)
 				{
-					if(u == v)
-						continue;
-					//float err = (correlation[user_list[udx], user_list[vdx]] - DataType.MatrixExtensions.RowScalarProduct(user_factors, user_list[udx], user_factors, user_list[vdx]));
+					int v = user_list[vdx];
 					float err = (correlation[u, v] - DataType.MatrixExtensions.RowScalarProduct(user_factors, u, user_factors, v));
 					second_sum += err * err;
 				}
 			}
-			second_sum *= 0.5f;*/
+			second_sum *= 0.5f;
 			
 			float user_frob = user_factors.FrobeniusNorm();
 			float item_frob = item_factors.FrobeniusNorm();
@@ -259,7 +257,6 @@ namespace MyMediaLite.RatingPrediction
 		
 		private void ComputeGradients()
 		{
-			//Console.WriteLine("Computing user gradients...");		
 			user_gradients.Init(0);
 			item_gradients.Init(0);
 			IList<int> user_list = ratings.AllUsers;
@@ -273,25 +270,21 @@ namespace MyMediaLite.RatingPrediction
 					var item_vector = item_factors.GetRow(i);
 					for(int f = 0; f < item_vector.Count; f++)
 					{
-						//user_gradients[u, f] = (item_vector[f] * err);
-						user_gradients[u, f] = (item_vector[f] * err) + Regularization * user_factors[u, f];
+						user_gradients[u, f] = (item_vector[f] * err);
 					}
 				}
-				//for(int vdx = udx + 1; vdx < user_list.Count; vdx++)
-				/*for(int vdx = 0; vdx < user_list.Count; vdx++)
+				for(int vdx = udx + 1; vdx < user_list.Count; vdx++)
+				//for(int vdx = 0; vdx < user_list.Count; vdx++)
 				{
-					int v = user_list[vdx];
-					if(u == v)
-						continue;
+					int v = user_list[vdx];					
 					float err = (DataType.MatrixExtensions.RowScalarProduct(user_factors, u, user_factors, v) - correlation[u, v]);
 					var user_vector = user_factors.GetRow(v);
 					for(int f = 0; f < user_vector.Count; f++)
 					{
 						user_gradients[u, f] += (2 * alpha * user_vector[f] * err) + Regularization * user_factors[u, f];
 					}
-				}*/
+				}
 			}
-			//Console.WriteLine("Computing item gradients...");			
 			IList<int> item_list = ratings.AllItems;
 			for(int idx = 0; idx < item_list.Count; idx++)
 			{
