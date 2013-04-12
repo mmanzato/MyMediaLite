@@ -148,15 +148,45 @@ namespace MyMediaLite.RatingPrediction
 					user_bias[u] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * user_reg_weight * user_bias[u]);
 				if (update_item)
 					item_bias[i] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * item_reg_weight * item_bias[i]);
-
+				
+				// adjust attributes
+				if(u < UserAttributes.NumberOfRows)
+				{
+					IList<int> attribute_list = UserAttributes.GetEntriesByRow(u);
+					if(attribute_list.Count > 0)
+					{
+						foreach (int attribute_id in attribute_list)
+						{							
+							main_demo[attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * main_demo[attribute_id]);
+						}
+					}
+				}
+				
+				for(int d = 0; d < AdditionalUserAttributes.Count; d++)
+				{
+					if(u < AdditionalUserAttributes[d].NumberOfRows)
+					{
+						IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(u);
+						if(attribute_list.Count > 0)
+						{
+							foreach (int attribute_id in attribute_list)
+							{
+								second_demo[d][attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * second_demo[d][attribute_id]);								
+							}
+						}
+					}	
+				}
+				
+				// adjust users similarities
 				foreach (int v in rkui) 
 				{					
 					float rating  = ratings.Get(v, i, ratings.ByItem[i]);
-					w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
+					//w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
+					w[u, v] += current_learnrate * ((err / (float)rkui.Count) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
 				}	
 				
 				// adjust latent factors
-				for (int f = 0; f < NumFactors; f++)
+				/*for (int f = 0; f < NumFactors; f++)
 				{
 					double u_f = user_factors[u, f];
 					double i_f = item_factors[i, f];
@@ -165,15 +195,13 @@ namespace MyMediaLite.RatingPrediction
 					{
 						double delta_u = err * i_f - user_reg_weight * u_f;
 						user_factors.Inc(u, f, current_learnrate * delta_u);
-						// this is faster (190 vs. 260 seconds per iteration on Netflix w/ k=30) than
-						//    user_factors[u, f] += learn_rate * delta_u;
 					}
 					if (update_item)
 					{
 						double delta_i = err * u_f - item_reg_weight * i_f;
 						item_factors.Inc(i, f, current_learnrate * delta_i);
 					}
-				}
+				}*/
 			}
 
 			UpdateLearnRate();
@@ -182,23 +210,93 @@ namespace MyMediaLite.RatingPrediction
 		///
 		protected float BasePredict(int user_id, int item_id)
 		{
-			return 	global_bias + 
+			double result =	global_bias + 
 				 	user_bias[user_id] + 
-					item_bias[item_id] + 
-					DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+					item_bias[item_id];/* + 
+					DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);*/
+			
+			if(user_id < UserAttributes.NumberOfRows)
+			{
+				IList<int> attribute_list = UserAttributes.GetEntriesByRow(user_id);
+				if(attribute_list.Count > 0)
+				{
+					double sum = 0;
+					double second_norm_denominator = attribute_list.Count;
+					foreach(int attribute_id in attribute_list) 
+					{
+						sum += main_demo[attribute_id];
+					}
+					result += sum / second_norm_denominator;
+				}
+			}
+			
+			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
+			{
+				if(user_id < AdditionalUserAttributes[d].NumberOfRows)
+				{
+					IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(user_id);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += second_demo[d][attribute_id];
+						}
+						result += sum / second_norm_denominator;
+					}
+				}	
+			}
+			
+			return (float) result;
 		}
 		
 		///
 		protected override float Predict(int user_id, int item_id, bool bound)
 		{						
-			float result = global_bias;
+			double result = global_bias;
 
 			if (user_id < user_bias.Length)
 				result += user_bias[user_id];
 			if (item_id < item_bias.Length)
 				result += item_bias[item_id];
-			if (user_id < user_factors.dim1 && item_id < item_factors.dim1)
-				result += DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+			/*if (user_id < user_factors.dim1 && item_id < item_factors.dim1)
+				result += DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);*/
+			
+			if(user_id < UserAttributes.NumberOfRows)
+			{
+				IList<int> attribute_list = UserAttributes.GetEntriesByRow(user_id);
+				if(attribute_list.Count > 0)
+				{
+					double sum = 0;
+					double second_norm_denominator = attribute_list.Count;
+					foreach(int attribute_id in attribute_list) 
+					{
+						sum += main_demo[attribute_id];
+					}
+					result += sum / second_norm_denominator;
+				}
+			}
+			
+			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
+			{
+				if(user_id < AdditionalUserAttributes[d].NumberOfRows)
+				{
+					IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(user_id);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += second_demo[d][attribute_id];
+						}
+						result += sum / second_norm_denominator;
+					}
+				}	
+			}
+			
+			
 			if (user_id <= MaxUserID && item_id <= MaxItemID)
 			{
 				float r_sum = 0;
@@ -217,7 +315,8 @@ namespace MyMediaLite.RatingPrediction
 				}
 
 				if (r_count > 0)
-					result += r_sum / (float)Math.Sqrt(r_count);				
+					//result += r_sum / (float)Math.Sqrt(r_count);				
+					result += r_sum / (float)r_count;
 			}
 
 			if (bound)
@@ -227,7 +326,7 @@ namespace MyMediaLite.RatingPrediction
 				if (result < MinRating)
 					return MinRating;
 			}
-			return result;
+			return (float)result;
 		}
 
 		/// <summary>Predict the rating of a given user for a given item</summary>		
