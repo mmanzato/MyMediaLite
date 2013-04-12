@@ -247,6 +247,8 @@
     <Compile Include="Eval\RatingBasedRankingCrossValidation.cs" />
     <Compile Include="RatingPrediction\DemoSVDPlusPlus.cs" />
     <Compile Include="RatingPrediction\DemoUserSimilarity.cs" />
+    <Compile Include="RatingPrediction\DemoMatrixFactorization.cs" />
+    <Compile Include="RatingPrediction\DemoMFUserKNN.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)/Microsoft.CSharp.targets" />
   <ItemGroup>
