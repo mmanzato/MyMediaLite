@@ -25,7 +25,7 @@ using MyMediaLite.Taxonomy;
 
 namespace MyMediaLite.RatingPrediction
 {
-	/// <summary>Neighborhood model that also takes into account _what_ users have rated (implicit feedback)</summary>
+	/// <summary>Neighborhood model that *doesn't* take into account _what_ users have rated (implicit feedback)</summary>
 	/// <remarks>
 	///   <para>
 	///     Literature:
@@ -40,64 +40,95 @@ namespace MyMediaLite.RatingPrediction
 	///     </list>
 	///   </para>
 	/// </remarks>
-	public class KorenImplicitKNN : KorenKNN
+	public class KorenKNN : SVDPlusPlus
 	{
-		/// <summary>Weights in the neighborhood model that represent the implicit feedback from users</summary>
-		protected Matrix<float> c;
+		/// <summary>Weights in the neighborhood model that represent coefficients relating items based on the existing ratings</summary>
+		protected Matrix<float> w;
+		
+		/// <summary>Correlation matrix over some kind of entity</summary>
+		protected ICorrelationMatrix correlation;
+		
+		///
+		protected IList<int>[] k_relevant_items;
+		
+		/// <summary>Matrix indicating which item was rated by which user</summary>
+		protected SparseBooleanMatrix data_item;
+		
+		///
+		protected IList<int> rkiu;
+		
+		///
+		public override IRatings Ratings
+		{
+			set {
+				base.Ratings = value;
+
+				data_item = new SparseBooleanMatrix();
+				for (int index = 0; index < ratings.Count; index++)
+					data_item[ratings.Items[index], ratings.Users[index]] = true;
+			}
+		}
+		
+		/// <summary>Number of neighbors to take into account for predictions</summary>
+		public uint K { get { return k; } set { k = value; } }
+		private uint k;
 				
-		/// <summary>Matrix indicating which item is preferred by which user</summary>
-		protected SparseBooleanMatrix additional_data_item;
-		
-		///
-		protected IList<int> nkiu;
-		
 		/// <summary>Default constructor</summary>
-		public KorenImplicitKNN() : base()
+		public KorenKNN() : base()
 		{
+			K = 30;
 		}
 		
 		///
-		protected override void InitNeighborhoodModel()
+		protected virtual void InitNeighborhoodModel()
 		{
-			base.InitNeighborhoodModel();
+			current_learnrate = LearnRate;
 			
-			nkiu = new List<int>();
+			correlation = new Pearson(MaxItemID + 1, 0);
+			((IRatingCorrelationMatrix) correlation).ComputeCorrelations(Ratings, EntityType.ITEM);
 			
-			c = new Matrix<float>(MaxItemID + 1, MaxItemID + 1);
-			c.InitNormal(InitMean, InitStdDev);
-			
-			/*Console.WriteLine("Item --> Neighbors");
-			for(int i = 0; i < 20; i++) 
+			k_relevant_items = new IList<int>[MaxItemID + 1];
+ 			for (int item_id = 0; item_id <= MaxItemID; item_id++)
 			{
-				Console.Write("Item {0} (total: {1}): ", i, k_relevant_items[i].Count);
-				foreach(int j in k_relevant_items[i]) {
-					Console.Write("{0}(w={1}) ", j, Predictor.GetItemSimilarity(i, j));
-				}
-				Console.WriteLine("");
-			}*/
+				k_relevant_items[item_id] = correlation.GetNearestNeighbors(item_id, K);
+			}
 			
-			additional_data_item = new SparseBooleanMatrix();
-			var additional_feedback = AdditionalFeedback;			
-			for (int index = 0; index < additional_feedback.Count; index++)
-				additional_data_item[additional_feedback.Items[index], additional_feedback.Users[index]] = true;
+			rkiu = new List<int>();
+			
+			w = new Matrix<float>(MaxItemID + 1, MaxItemID + 1);
+			w.InitNormal(InitMean, InitStdDev);
+			
+			user_bias = new float[MaxUserID + 1];
+			item_bias = new float[MaxItemID + 1];
 		}
 		
 		///
-		protected override void UpdateSimilarItems(int user_id, int item_id)
+		public override void Train()
+		{	
+			InitNeighborhoodModel();
+			
+			// learn model parameters
+			global_bias = ratings.Average;
+			LearnFactors(ratings.RandomIndex, true, true);
+		}
+		
+		///
+		protected void TrainAncestors()
+		{
+			base.Train();	
+		}
+		
+		///
+		protected virtual void UpdateSimilarItems(int user_id, int item_id)
 		{
 			rkiu.Clear();
-			nkiu.Clear();
 			
 			foreach (int j in k_relevant_items[item_id]) 
 			{
 				if (data_item[j, user_id])
 				{
 					rkiu.Add(j);
-				}
-				if (data_item[j, user_id] || additional_data_item[j, user_id])
-				{
-					nkiu.Add(j);	
-				}					
+				}			
 			}
 		}
 		
@@ -134,14 +165,15 @@ namespace MyMediaLite.RatingPrediction
 					float rating  = ratings.Get(u, j, ratings.ByUser[u]);
 					w[i, j] += current_learnrate * ((err / (float)Math.Sqrt(rkiu.Count)) * (rating - BasePredict(u, j)) - reg * w[i, j]);		
 				}
-				
-				foreach (int j in nkiu)
-				{
-					c[i, j] += current_learnrate * ((err / (float)Math.Sqrt(nkiu.Count)) - reg * c[i, j]);		
-				}				
 			}
 			
 			UpdateLearnRate();
+		}
+		
+		///
+		protected float BasePredict(int user_id, int item_id)
+		{
+			return global_bias + user_bias[user_id] + item_bias[item_id];
 		}
 		
 		///
@@ -157,8 +189,6 @@ namespace MyMediaLite.RatingPrediction
 			{
 				float r_sum = 0;
 				int r_count = 0;
-				float n_sum = 0;
-				int n_count = 0;
 				
 				if(bound)
 				{
@@ -171,16 +201,9 @@ namespace MyMediaLite.RatingPrediction
 					r_sum += (rating - BasePredict(user_id, j)) * w[item_id, j];
 					r_count++;
 				}
-				foreach (int j in nkiu) 
-				{
-					n_sum += c[item_id, j];
-					n_count++;
-				}				
 				
 				if (r_count > 0)
-					result += r_sum / (float)Math.Sqrt(r_count);				
-				if (n_count > 0)
-					result += n_sum / (float)Math.Sqrt(n_count);
+					result += r_sum / (float)Math.Sqrt(r_count);								
 			}
 			
 			if (bound)
@@ -200,6 +223,15 @@ namespace MyMediaLite.RatingPrediction
 		public override float Predict(int user_id, int item_id)
 		{
 			return Predict(user_id, item_id, true);
+		}
+		
+		///
+		public override string ToString()
+		{
+			return string.Format(
+				CultureInfo.InvariantCulture,
+				"{0} K={1} regularization={2} bias_reg={3} frequency_regularization={4} learn_rate={5} bias_learn_rate={6} num_iter={7} decay={8}",
+				this.GetType().Name, K, Regularization, BiasReg, FrequencyRegularization, LearnRate, BiasLearnRate, NumIter, Decay);
 		}
 	}
 }

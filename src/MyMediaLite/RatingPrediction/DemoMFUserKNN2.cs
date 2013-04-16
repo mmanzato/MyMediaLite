@@ -26,7 +26,7 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
-	public class DemoMFUserKNN : DemoUserBaseline
+	public class DemoMFUserKNN2 : DemoMatrixFactorization
 	{
 		/// <summary>Weights in the neighborhood model that represent coefficients relating items based on the existing ratings</summary>
 		protected Matrix<float> w;
@@ -59,7 +59,7 @@ namespace MyMediaLite.RatingPrediction
 		public uint K { get { return k; } set { k = value; } }
 		private uint k;
 		
-		public DemoMFUserKNN () : base()
+		public DemoMFUserKNN2 () : base()
 		{
 			K = 30;
 		}
@@ -181,8 +181,8 @@ namespace MyMediaLite.RatingPrediction
 				foreach (int v in rkui) 
 				{					
 					float rating  = ratings.Get(v, i, ratings.ByItem[i]);
-					//w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
-					w[u, v] += current_learnrate * ((err / (float)rkui.Count) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
+					w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
+					//w[u, v] += current_learnrate * ((err / (float)rkui.Count) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
 				}	
 				
 				// adjust latent factors
@@ -315,8 +315,8 @@ namespace MyMediaLite.RatingPrediction
 				}
 
 				if (r_count > 0)
-					//result += r_sum / (float)Math.Sqrt(r_count);				
-					result += r_sum / (float)r_count;
+					result += r_sum / (float)Math.Sqrt(r_count);				
+					//result += r_sum / (float)r_count;
 			}
 
 			if (bound)
@@ -338,7 +338,7 @@ namespace MyMediaLite.RatingPrediction
 			return Predict(user_id, item_id, true);
 		}
 		
-///
+		///
 		public override string ToString()
 		{
 			return string.Format(

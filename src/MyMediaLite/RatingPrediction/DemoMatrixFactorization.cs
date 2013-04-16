@@ -29,56 +29,10 @@ namespace MyMediaLite.RatingPrediction
 	/// <summary>
 	/// Demo matrix factorization.
 	/// </summary>
-	public class DemoMatrixFactorization : BiasedMatrixFactorization, IUserAttributeAwareRecommender
+	public class DemoMatrixFactorization : DemoUserBaseline
 	{
-		///
-		public IBooleanMatrix UserAttributes
-		{
-			get { return this.user_attributes; }
-			set {
-				this.user_attributes = value;
-				this.NumUserAttributes = user_attributes.NumberOfColumns;
-				this.MaxUserID = Math.Max(MaxUserID, user_attributes.NumberOfRows - 1);
-			}
-		}
-		private IBooleanMatrix user_attributes;
-		
-		///
-		public List<IBooleanMatrix> AdditionalUserAttributes
-		{
-			get { return this.additional_user_attributes; }
-			set {
-				this.additional_user_attributes = value;
-			}
-		}
-		private List<IBooleanMatrix> additional_user_attributes;
-		
-		///
-		public int NumUserAttributes { get; private set; }
-		
-		/// <summary>Main demographic biases</summary>
-		protected float[] main_demo;
-		
-		/// <summary>Secondary biases</summary>
-		protected List<float[]> second_demo;
-		
-		
 		public DemoMatrixFactorization () : base()
 		{
-		}
-		
-		///
-		protected internal override void InitModel()
-		{
-			base.InitModel();
-			
-			main_demo = new float[user_attributes.NumberOfColumns];
-			second_demo = new List<float[]>(additional_user_attributes.Count);
-			for(int d = 0; d < additional_user_attributes.Count; d++)
-			{
-				float[] element = new float[additional_user_attributes[d].NumberOfColumns];			
-				second_demo.Add(element);
-			}
 		}
 		
 		///
@@ -113,9 +67,9 @@ namespace MyMediaLite.RatingPrediction
 					item_bias[i] += BiasLearnRate * current_learnrate * (gradient_common - BiasReg * item_reg_weight * item_bias[i]);
 				
 				// adjust attributes
-				if(u < user_attributes.NumberOfRows)
+				if(u < UserAttributes.NumberOfRows)
 				{
-					IList<int> attribute_list = user_attributes.GetEntriesByRow(u);
+					IList<int> attribute_list = UserAttributes.GetEntriesByRow(u);
 					if(attribute_list.Count > 0)
 					{
 						foreach (int attribute_id in attribute_list)
@@ -125,11 +79,11 @@ namespace MyMediaLite.RatingPrediction
 					}
 				}
 				
-				for(int d = 0; d < additional_user_attributes.Count; d++)
+				for(int d = 0; d < AdditionalUserAttributes.Count; d++)
 				{
-					if(u < additional_user_attributes[d].NumberOfRows)
+					if(u < AdditionalUserAttributes[d].NumberOfRows)
 					{
-						IList<int> attribute_list = additional_user_attributes[d].GetEntriesByRow(u);
+						IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(u);
 						if(attribute_list.Count > 0)
 						{
 							foreach (int attribute_id in attribute_list)
@@ -175,9 +129,9 @@ namespace MyMediaLite.RatingPrediction
 			if (user_id < user_factors.dim1 && item_id < item_factors.dim1)
 				score += DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
 			
-			if(user_id < user_attributes.NumberOfRows)
+			if(user_id < UserAttributes.NumberOfRows)
 			{
-				IList<int> attribute_list = user_attributes.GetEntriesByRow(user_id);
+				IList<int> attribute_list = UserAttributes.GetEntriesByRow(user_id);
 				if(attribute_list.Count > 0)
 				{
 					double sum = 0;
@@ -190,11 +144,11 @@ namespace MyMediaLite.RatingPrediction
 				}
 			}
 			
-			for(int d = 0; d < additional_user_attributes.Count; d++)
+			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
 			{
-				if(user_id < additional_user_attributes[d].NumberOfRows)
+				if(user_id < AdditionalUserAttributes[d].NumberOfRows)
 				{
-					IList<int> attribute_list = additional_user_attributes[d].GetEntriesByRow(user_id);
+					IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(user_id);
 					if(attribute_list.Count > 0)
 					{
 						double sum = 0;
