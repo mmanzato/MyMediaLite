@@ -26,7 +26,7 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
-	public class DemoMFUserKNN : DemoUserBaseline
+	public class DemoMFUserKNN3 : DemoUserItemAtt
 	{
 		/// <summary>Weights in the neighborhood model that represent coefficients relating items based on the existing ratings</summary>
 		protected Matrix<float> w;
@@ -59,7 +59,7 @@ namespace MyMediaLite.RatingPrediction
 		public uint K { get { return k; } set { k = value; } }
 		private uint k;
 		
-		public DemoMFUserKNN () : base()
+		public DemoMFUserKNN3 () : base()
 		{
 			K = 30;
 		}
@@ -149,7 +149,7 @@ namespace MyMediaLite.RatingPrediction
 				if (update_item)
 					item_bias[i] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * item_reg_weight * item_bias[i]);
 				
-				// adjust attributes
+				// adjust demo global attributes
 				if(u < UserAttributes.NumberOfRows)
 				{
 					IList<int> attribute_list = UserAttributes.GetEntriesByRow(u);
@@ -177,125 +177,56 @@ namespace MyMediaLite.RatingPrediction
 					}	
 				}
 				
+				// adjust demog specific attributes
+				if(u < UserAttributes.NumberOfRows && i < ItemAttributes.NumberOfRows)
+				{
+					IList<int> item_attribute_list = ItemAttributes.GetEntriesByRow(i);
+					float item_norm_denominator = item_attribute_list.Count;
+					
+					IList<int> user_attribute_list = UserAttributes.GetEntriesByRow(u);
+					float user_norm = 1 / user_attribute_list.Count;				
+					
+					float norm_error = err / item_norm_denominator;
+					
+					foreach(int u_att in user_attribute_list)
+					{
+						foreach(int i_att in item_attribute_list)
+						{
+							h[0][u_att, i_att] += current_learnrate * (norm_error * user_norm - Regularization * h[0][u_att, i_att]);
+						}
+					}								
+					
+					for(int d = 0; d < AdditionalUserAttributes.Count; d++)
+					{
+						user_attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(u);
+						user_norm = 1 / user_attribute_list.Count;
+						
+						foreach(int u_att in user_attribute_list)
+						{
+							foreach(int i_att in item_attribute_list)
+							{
+								h[d + 1][u_att, i_att] += current_learnrate * (norm_error * user_norm - Regularization * h[d + 1][u_att, i_att]);;
+							}
+						}									
+					}
+				}
+				
 				// adjust users similarities
 				foreach (int v in rkui) 
 				{					
 					float rating  = ratings.Get(v, i, ratings.ByItem[i]);
-					//w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
-					w[u, v] += current_learnrate * ((err / (float)rkui.Count) * (rating - BasePredict(v, i)) - reg * w[u, v]);		
-				}	
-				
-				// adjust latent factors
-				/*for (int f = 0; f < NumFactors; f++)
-				{
-					double u_f = user_factors[u, f];
-					double i_f = item_factors[i, f];
-
-					if (update_user)
-					{
-						double delta_u = err * i_f - user_reg_weight * u_f;
-						user_factors.Inc(u, f, current_learnrate * delta_u);
-					}
-					if (update_item)
-					{
-						double delta_i = err * u_f - item_reg_weight * i_f;
-						item_factors.Inc(i, f, current_learnrate * delta_i);
-					}
-				}*/
+					w[u, v] += current_learnrate * ((err / (float)Math.Sqrt(rkui.Count)) * (rating - base.Predict(v, i, false)) - reg * w[u, v]);		
+					//w[u, v] += current_learnrate * ((err / (float)rkui.Count) * (rating - base.Predict(v, i, false)) - reg * w[u, v]);		
+				}
 			}
 
 			UpdateLearnRate();
-		}
-
-		///
-		protected float BasePredict(int user_id, int item_id)
-		{
-			double result =	global_bias + 
-				 	user_bias[user_id] + 
-					item_bias[item_id];/* + 
-					DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);*/
-			
-			if(user_id < UserAttributes.NumberOfRows)
-			{
-				IList<int> attribute_list = UserAttributes.GetEntriesByRow(user_id);
-				if(attribute_list.Count > 0)
-				{
-					double sum = 0;
-					double second_norm_denominator = attribute_list.Count;
-					foreach(int attribute_id in attribute_list) 
-					{
-						sum += main_demo[attribute_id];
-					}
-					result += sum / second_norm_denominator;
-				}
-			}
-			
-			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
-			{
-				if(user_id < AdditionalUserAttributes[d].NumberOfRows)
-				{
-					IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(user_id);
-					if(attribute_list.Count > 0)
-					{
-						double sum = 0;
-						double second_norm_denominator = attribute_list.Count;
-						foreach(int attribute_id in attribute_list) 
-						{
-							sum += second_demo[d][attribute_id];
-						}
-						result += sum / second_norm_denominator;
-					}
-				}	
-			}
-			
-			return (float) result;
 		}
 		
 		///
 		protected override float Predict(int user_id, int item_id, bool bound)
 		{						
-			double result = global_bias;
-
-			if (user_id < user_bias.Length)
-				result += user_bias[user_id];
-			if (item_id < item_bias.Length)
-				result += item_bias[item_id];
-			/*if (user_id < user_factors.dim1 && item_id < item_factors.dim1)
-				result += DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);*/
-			
-			if(user_id < UserAttributes.NumberOfRows)
-			{
-				IList<int> attribute_list = UserAttributes.GetEntriesByRow(user_id);
-				if(attribute_list.Count > 0)
-				{
-					double sum = 0;
-					double second_norm_denominator = attribute_list.Count;
-					foreach(int attribute_id in attribute_list) 
-					{
-						sum += main_demo[attribute_id];
-					}
-					result += sum / second_norm_denominator;
-				}
-			}
-			
-			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
-			{
-				if(user_id < AdditionalUserAttributes[d].NumberOfRows)
-				{
-					IList<int> attribute_list = AdditionalUserAttributes[d].GetEntriesByRow(user_id);
-					if(attribute_list.Count > 0)
-					{
-						double sum = 0;
-						double second_norm_denominator = attribute_list.Count;
-						foreach(int attribute_id in attribute_list) 
-						{
-							sum += second_demo[d][attribute_id];
-						}
-						result += sum / second_norm_denominator;
-					}
-				}	
-			}
-			
+			double result = base.Predict(user_id, item_id, false);
 			
 			if (user_id <= MaxUserID && item_id <= MaxItemID)
 			{
@@ -315,8 +246,8 @@ namespace MyMediaLite.RatingPrediction
 				}
 
 				if (r_count > 0)
-					//result += r_sum / (float)Math.Sqrt(r_count);				
-					result += r_sum / (float)r_count;
+					result += r_sum / (float)Math.Sqrt(r_count);				
+					//result += r_sum / (float)r_count;
 			}
 
 			if (bound)
@@ -338,7 +269,7 @@ namespace MyMediaLite.RatingPrediction
 			return Predict(user_id, item_id, true);
 		}
 		
-///
+		///
 		public override string ToString()
 		{
 			return string.Format(

@@ -254,6 +254,8 @@
     <Compile Include="RatingPrediction\KorenKNN.cs" />
     <Compile Include="RatingPrediction\DemoMFUserKNN2.cs" />
     <Compile Include="RatingPrediction\DemoUserBaseline.cs" />
+    <Compile Include="RatingPrediction\DemoUserItemAtt.cs" />
+    <Compile Include="RatingPrediction\DemoMFUserKNN3.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)/Microsoft.CSharp.targets" />
   <ItemGroup>

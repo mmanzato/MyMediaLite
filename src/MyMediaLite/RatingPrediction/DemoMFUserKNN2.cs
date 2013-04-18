@@ -26,7 +26,7 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
-	public class DemoMFUserKNN2 : DemoMatrixFactorization
+	public class DemoMFUserKNN2 : DemoUserBaseline
 	{
 		/// <summary>Weights in the neighborhood model that represent coefficients relating items based on the existing ratings</summary>
 		protected Matrix<float> w;
@@ -135,7 +135,7 @@ namespace MyMediaLite.RatingPrediction
 				int u = ratings.Users[index];
 				int i = ratings.Items[index];
 
-				//UpdateSimilarUsers(u, i);
+				UpdateSimilarUsers(u, i);
 
 				float prediction = Predict(u, i, false);
 				float err = ratings[index] - prediction;
