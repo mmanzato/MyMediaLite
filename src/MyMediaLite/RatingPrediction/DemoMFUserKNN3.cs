@@ -241,7 +241,7 @@ namespace MyMediaLite.RatingPrediction
 				foreach (int v in rkui) 
 				{
 					float rating  = ratings.Get(v, item_id, ratings.ByItem[item_id]);
-					r_sum += (rating - BasePredict(v, item_id)) * w[user_id, v];
+					r_sum += (rating - base.Predict(v, item_id, false)) * w[user_id, v];
 					r_count++;
 				}
 
