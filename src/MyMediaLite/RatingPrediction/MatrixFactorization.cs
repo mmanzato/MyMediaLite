@@ -202,7 +202,7 @@ namespace MyMediaLite.RatingPrediction
 		}
 
 		///
-		protected float Predict(int user_id, int item_id, bool bound)
+		protected virtual float Predict(int user_id, int item_id, bool bound)
 		{
 			float result = global_bias + DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
 

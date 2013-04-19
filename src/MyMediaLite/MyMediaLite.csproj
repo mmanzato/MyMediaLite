@@ -245,7 +245,9 @@
     <Compile Include="ItemRecommendation\ExternalItemRecommender.cs" />
     <Compile Include="RatingPrediction\GSVDPlusPlus.cs" />
     <Compile Include="Eval\RatingBasedRankingCrossValidation.cs" />
-    <Compile Include="RatingPrediction\DemoSVDPlusPlus.cs" />
+    <Compile Include="RatingPrediction\DemoUserBaseline.cs" />
+    <Compile Include="RatingPrediction\DemoUserItemAtt.cs" />
+    <Compile Include="RatingPrediction\DemoGSVDPlusPlus.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)/Microsoft.CSharp.targets" />
   <ItemGroup>

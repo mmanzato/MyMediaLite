@@ -275,7 +275,7 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 			if(user_attributes.Count > 1)
 				((IUserAttributeAwareRecommender)recommender).AdditionalUserAttributes = user_attributes.GetRange(1, user_attributes.Count - 1);
 			else 
-				((IUserAttributeAwareRecommender)recommender).AdditionalUserAttributes = null;
+				((IUserAttributeAwareRecommender)recommender).AdditionalUserAttributes = new List<IBooleanMatrix>();
 		}
 
 		// item attributes
@@ -296,7 +296,7 @@ public abstract class CommandLineProgram<T> where T:IRecommender
 			if(item_attributes.Count > 1)
 				((IItemAttributeAwareRecommender)recommender).AdditionalItemAttributes = item_attributes.GetRange(1, item_attributes.Count - 1);
 			else 
-				((IItemAttributeAwareRecommender)recommender).AdditionalItemAttributes = null;
+				((IItemAttributeAwareRecommender)recommender).AdditionalItemAttributes = new List<IBooleanMatrix>();
 		}
 
 		// user relation
