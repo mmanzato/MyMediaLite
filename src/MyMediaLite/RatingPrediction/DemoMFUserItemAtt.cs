@@ -15,10 +15,6 @@ namespace MyMediaLite.RatingPrediction
 {
 	public class DemoMFUserItemAtt : DemoUserBaseline, ITransductiveRatingPredictor, IItemAttributeAwareRecommender
 	{
-		/// <summary>rating biases of the users</summary>
-		protected internal float[] user_bias;
-		/// <summary>rating biases of the items</summary>
-		protected internal float[] item_bias;
 		/// <summary>user factors (part expressed via the rated items)</summary>
 		protected internal Matrix<float> y;
 		/// <summary>user factors (individual part)</summary>
@@ -33,17 +29,6 @@ namespace MyMediaLite.RatingPrediction
 		/// <summary>precomputed regularization terms for the y matrix</summary>
 		protected float[] y_reg;
 		int[] feedback_count_by_item;
-
-		/// <summary>bias learn rate</summary>
-		public float BiasLearnRate { get; set; }
-		/// <summary>regularization constant for biases</summary>
-		public float BiasReg { get; set; }
-
-		/// <summary>Regularization based on rating frequency</summary>
-		/// <description>
-		/// Regularization proportional to the inverse of the square root of the number of ratings associated with the user or item.
-		/// As described in the paper by Menon and Elkan.
-		/// </description>
 		public bool FrequencyRegularization { get; set; }
 
 		///
@@ -80,7 +65,6 @@ namespace MyMediaLite.RatingPrediction
 		{		
 		}
 
-
 				///
 		public override void Train()
 		{
@@ -99,11 +83,12 @@ namespace MyMediaLite.RatingPrediction
 
 			base.Train();
 		}
-
 		///
-		protected override float Predict(int user_id, int item_id, bool bound)
+		public override float Predict(int user_id, int item_id)
 		{
 			double result = base.Predict(user_id, item_id, false);
+			if (user_factors == null)
+				PrecomputeUserFactors();
 						
 			if (user_id < UserAttributes.NumberOfRows && item_id < ItemAttributes.NumberOfRows)
 			{
@@ -142,54 +127,48 @@ namespace MyMediaLite.RatingPrediction
 				result += demo_spec / item_norm_denominator;
 			}
 
-			if (user_factors == null)
-				PrecomputeUserFactors();
 			if (user_id <= MaxUserID && item_id <= MaxItemID)
 				result += DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
-			if (bound)
-			{
-				if (result > MaxRating)
-					return MaxRating;
-				if (result < MinRating)
+			if (result > MaxRating)
+				return MaxRating;
+			if (result < MinRating)
 					return MinRating;
-			}
+
 			return (float)result;
 		}
 		///
 		protected internal override void InitModel()
 		{
-			base.InitModel();
+			base.InitModel ();
 			
 			h = new Matrix<float>[AdditionalUserAttributes.Count + 1];
-			h[0] = new Matrix<float>(UserAttributes.NumberOfColumns, ItemAttributes.NumberOfColumns);
-			h[0].InitNormal(InitMean, InitStdDev);
-			for(int d = 0; d < AdditionalUserAttributes.Count; d++)
-			{
-				h[d + 1] = new Matrix<float>(AdditionalUserAttributes[d].NumberOfColumns, ItemAttributes.NumberOfColumns);
-				h[d + 1].InitNormal(InitMean, InitStdDev);
+			h [0] = new Matrix<float> (UserAttributes.NumberOfColumns, ItemAttributes.NumberOfColumns);
+			h [0].InitNormal (InitMean, InitStdDev);
+			for (int d = 0; d < AdditionalUserAttributes.Count; d++) {
+				h [d + 1] = new Matrix<float> (AdditionalUserAttributes [d].NumberOfColumns, ItemAttributes.NumberOfColumns);
+				h [d + 1].InitNormal (InitMean, InitStdDev);
 			}
-			p = new Matrix<float>(MaxUserID + 1, NumFactors);
-			p.InitNormal(InitMean, InitStdDev);
-			y = new Matrix<float>(MaxItemID + 1, NumFactors);
-			y.InitNormal(InitMean, InitStdDev);
+			p = new Matrix<float> (MaxUserID + 1, NumFactors);
+			p.InitNormal (InitMean, InitStdDev);
+			y = new Matrix<float> (MaxItemID + 1, NumFactors);
+			y.InitNormal (InitMean, InitStdDev);
 
 			// set factors to zero for items without training examples
 			for (int i = 0; i < ratings.CountByItem.Count; i++)
-				if (ratings.CountByItem[i] == 0)
-					y.SetRowToOneValue(i, 0);
-			for (int i = ratings.CountByItem.Count; i <= MaxItemID; i++)
-			{
-				y.SetRowToOneValue(i, 0);
-				item_factors.SetRowToOneValue(i, 0);
+				if (ratings.CountByItem [i] == 0)
+					y.SetRowToOneValue (i, 0);
+			for (int i = ratings.CountByItem.Count; i <= MaxItemID; i++) {
+				y.SetRowToOneValue (i, 0);
+				item_factors.SetRowToOneValue (i, 0);
 			}
 			// set factors to zero for users without training examples (rest is done in MatrixFactorization.cs)
-			for (int u = ratings.CountByUser.Count; u <= MaxUserID; u++)
-				p.SetRowToOneValue(u, 0);
-
+			for (int u = ratings.CountByUser.Count; u <= MaxUserID; u++) {
+				p.SetRowToOneValue (u, 0);
+			}
 			user_bias = new float[MaxUserID + 1];
 			item_bias = new float[MaxItemID + 1];
 		}
-		
+
 		///
 		protected override void Iterate(IList<int> rating_indices, bool update_user, bool update_item)
 		{
@@ -200,21 +179,52 @@ namespace MyMediaLite.RatingPrediction
 			{
 				int u = ratings.Users[index];
 				int i = ratings.Items[index];
-				float prediction = global_bias + user_bias[u] + item_bias[i];
+
+				float prediction = Predict(u, i);
+
 				var p_plus_y_sum_vector = y.SumOfRows(items_rated_by_user[u]);
 				double norm_denominator = Math.Sqrt(items_rated_by_user[u].Length);
-				prediction += DataType.MatrixExtensions.RowScalarProduct(item_factors, i, p_plus_y_sum_vector);
+				for (int f = 0; f < p_plus_y_sum_vector.Count; f++)
+					p_plus_y_sum_vector[f] = (float) (p_plus_y_sum_vector[f] / norm_denominator + p[u, f]);
+
+				//prediction += DataType.MatrixExtensions.RowScalarProduct(item_factors, i, p_plus_y_sum_vector);
 
 				float err = ratings[index] - prediction;
 				
 				float user_reg_weight = FrequencyRegularization ? (float) (reg / Math.Sqrt(ratings.CountByUser[u])) : reg;
 				float item_reg_weight = FrequencyRegularization ? (float) (reg / Math.Sqrt(ratings.CountByItem[i])) : reg;
-
+			
 				// adjust biases
 				if (update_user)
 					user_bias[u] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * user_reg_weight * user_bias[u]);
 				if (update_item)
 					item_bias[i] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * item_reg_weight * item_bias[i]);
+
+				// adjust factors  ||  DITO extension
+				double normalized_error = err / norm_denominator;
+				for (int f = 0; f < NumFactors; f++)
+				{
+					float i_f = item_factors[i, f];
+
+					// if necessary, compute and apply updates
+					if (update_user)
+					{
+						double delta_u = err * i_f - user_reg_weight * p[u, f];
+						p.Inc(u, f, current_learnrate * delta_u);
+					}
+					if (update_item)
+					{
+						double delta_i = err * p_plus_y_sum_vector[f] - item_reg_weight * i_f;
+						item_factors.Inc(i, f, current_learnrate * delta_i);
+						double common_update = normalized_error * i_f;
+						foreach (int other_item_id in items_rated_by_user[u])
+						{
+							double delta_oi = common_update - y_reg[other_item_id] * y[other_item_id, f];
+							y.Inc(other_item_id, f, current_learnrate * delta_oi);
+						}
+					}
+
+					}
 
 				// adjust demo global attributes
 				if(u < UserAttributes.NumberOfRows)
@@ -278,30 +288,8 @@ namespace MyMediaLite.RatingPrediction
 					}
 				}
 
-				// adjust factors
-				double normalized_error = err / norm_denominator;
-				for (int f = 0; f < NumFactors; f++)
-				{
-					float i_f = item_factors[i, f];
-
-					// if necessary, compute and apply updates
-					if (update_user)
-					{
-						double delta_u = err * i_f - user_reg_weight * p[u, f];
-						p.Inc(u, f, current_learnrate * delta_u);
-					}
-					if (update_item)
-					{
-						double delta_i = err * p_plus_y_sum_vector[f] - item_reg_weight * i_f;
-						item_factors.Inc(i, f, current_learnrate * delta_i);
-						double common_update = normalized_error * i_f;
-						foreach (int other_item_id in items_rated_by_user[u])
-						{
-							double delta_oi = common_update - y_reg[other_item_id] * y[other_item_id, f];
-							y.Inc(other_item_id, f, current_learnrate * delta_oi);
-						}
-					}
-				}
+//XXX
+				
 			}
 
 			UpdateLearnRate();
@@ -340,4 +328,3 @@ namespace MyMediaLite.RatingPrediction
 		}
 	}
 }
-
