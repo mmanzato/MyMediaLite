@@ -26,34 +26,8 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
-	public class DemoUserItemAtt : DemoUserBaseline, IItemAttributeAwareRecommender
+	public class DemoUserItemAtt : DemoUserBaseline
 	{
-		///
-		public IBooleanMatrix ItemAttributes
-		{
-			get { return this.item_attributes; }
-			set {
-				this.item_attributes = value;
-				this.NumItemAttributes = item_attributes.NumberOfColumns;
-				this.MaxItemID = Math.Max(MaxItemID, item_attributes.NumberOfRows - 1);
-			}
-		}
-		///
-		protected IBooleanMatrix item_attributes;
-		
-		///
-		public List<IBooleanMatrix> AdditionalItemAttributes
-		{
-			get { return this.additional_item_attributes; }
-			set {
-				this.additional_item_attributes = value;
-			}
-		}
-		private List<IBooleanMatrix> additional_item_attributes;
-
-		///
-		public int NumItemAttributes { get; private set; }
-		
 		///
 		protected Matrix<float>[] h;
 		
@@ -122,6 +96,34 @@ namespace MyMediaLite.RatingPrediction
 							foreach (int attribute_id in attribute_list)
 							{
 								second_demo[d][attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * second_demo[d][attribute_id]);								
+							}
+						}
+					}	
+				}
+
+				// adjust item attributes
+				if(i < ItemAttributes.NumberOfRows)
+				{
+					IList<int> attribute_list = ItemAttributes.GetEntriesByRow(i);
+					if(attribute_list.Count > 0)
+					{
+						foreach (int attribute_id in attribute_list)
+						{							
+							main_metadata[attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * main_metadata[attribute_id]);
+						}
+					}
+				}
+				
+				for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+				{
+					if(i < AdditionalItemAttributes[g].NumberOfRows)
+					{
+						IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(i);
+						if(attribute_list.Count > 0)
+						{
+							foreach (int attribute_id in attribute_list)
+							{
+								second_metadata[g][attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * second_metadata[g][attribute_id]);								
 							}
 						}
 					}	
@@ -205,6 +207,39 @@ namespace MyMediaLite.RatingPrediction
 				}
 				
 				result += demo_spec / item_norm_denominator;
+			}
+
+			if(item_id < ItemAttributes.NumberOfRows)
+			{
+				IList<int> attribute_list = ItemAttributes.GetEntriesByRow(item_id);
+				if(attribute_list.Count > 0)
+				{
+					double sum = 0;
+					double second_norm_denominator = attribute_list.Count;
+					foreach(int attribute_id in attribute_list) 
+					{
+						sum += main_metadata[attribute_id];
+					}
+					result += sum / second_norm_denominator;
+				}
+			}
+			
+			for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+			{
+				if(item_id < AdditionalItemAttributes[g].NumberOfRows)
+				{
+					IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(item_id);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += second_metadata[g][attribute_id];
+						}
+						result += sum / second_norm_denominator;
+					}
+				}	
 			}
 
 			if (bound)

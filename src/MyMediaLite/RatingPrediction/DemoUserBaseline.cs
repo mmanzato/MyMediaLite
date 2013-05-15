@@ -26,7 +26,10 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
-	public class DemoUserBaseline : BiasedMatrixFactorization, IUserAttributeAwareRecommender
+	/// <summary>
+	/// Demo user baseline.
+	/// </summary>
+	public class DemoUserBaseline : BiasedMatrixFactorization, IUserAttributeAwareRecommender, IItemAttributeAwareRecommender
 	{
 		///
 		public IBooleanMatrix UserAttributes
@@ -52,6 +55,32 @@ namespace MyMediaLite.RatingPrediction
 		
 		///
 		public int NumUserAttributes { get; private set; }
+
+		///
+		public IBooleanMatrix ItemAttributes
+		{
+			get { return this.item_attributes; }
+			set {
+				this.item_attributes = value;
+				this.NumItemAttributes = item_attributes.NumberOfColumns;
+				this.MaxItemID = Math.Max(MaxItemID, item_attributes.NumberOfRows - 1);
+			}
+		}
+		///
+		protected IBooleanMatrix item_attributes;
+		
+		///
+		public List<IBooleanMatrix> AdditionalItemAttributes
+		{
+			get { return this.additional_item_attributes; }
+			set {
+				this.additional_item_attributes = value;
+			}
+		}
+		private List<IBooleanMatrix> additional_item_attributes;
+
+		///
+		public int NumItemAttributes { get; private set; }
 		
 		/// <summary>Main demographic biases</summary>
 		protected float[] main_demo;
@@ -59,6 +88,12 @@ namespace MyMediaLite.RatingPrediction
 		/// <summary>Secondary biases</summary>
 		protected List<float[]> second_demo;
 				
+		/// <summary>Main metadata biases</summary>
+		protected float[] main_metadata;
+		
+		/// <summary>Secondary biases</summary>
+		protected List<float[]> second_metadata;
+
 		public DemoUserBaseline () : base()
 		{		
 		}
@@ -74,6 +109,14 @@ namespace MyMediaLite.RatingPrediction
 			{
 				float[] element = new float[additional_user_attributes[d].NumberOfColumns];			
 				second_demo.Add(element);
+			}
+
+			main_metadata = new float[item_attributes.NumberOfColumns];
+			second_metadata = new List<float[]>(additional_item_attributes.Count);
+			for(int g = 0; g < additional_item_attributes.Count; g++)
+			{
+				float[] element = new float[additional_item_attributes[g].NumberOfColumns];			
+				second_metadata.Add(element);
 			}
 		}
 		
@@ -99,7 +142,7 @@ namespace MyMediaLite.RatingPrediction
 				if (update_item)
 					item_bias[i] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * item_reg_weight * item_bias[i]);
 				
-				// adjust attributes
+				// adjust user attributes
 				if(u < UserAttributes.NumberOfRows)
 				{
 					IList<int> attribute_list = UserAttributes.GetEntriesByRow(u);
@@ -125,7 +168,35 @@ namespace MyMediaLite.RatingPrediction
 							}
 						}
 					}	
-				}				
+				}	
+
+				// adjust item attributes
+				if(i < ItemAttributes.NumberOfRows)
+				{
+					IList<int> attribute_list = ItemAttributes.GetEntriesByRow(i);
+					if(attribute_list.Count > 0)
+					{
+						foreach (int attribute_id in attribute_list)
+						{							
+							main_metadata[attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * main_metadata[attribute_id]);
+						}
+					}
+				}
+				
+				for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+				{
+					if(i < AdditionalItemAttributes[g].NumberOfRows)
+					{
+						IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(i);
+						if(attribute_list.Count > 0)
+						{
+							foreach (int attribute_id in attribute_list)
+							{
+								second_metadata[g][attribute_id] += BiasLearnRate * current_learnrate * (err - BiasReg * Regularization * second_metadata[g][attribute_id]);								
+							}
+						}
+					}	
+				}
 			}
 
 			UpdateLearnRate();
@@ -168,6 +239,39 @@ namespace MyMediaLite.RatingPrediction
 						foreach(int attribute_id in attribute_list) 
 						{
 							sum += second_demo[d][attribute_id];
+						}
+						result += sum / second_norm_denominator;
+					}
+				}	
+			}
+
+			if(item_id < ItemAttributes.NumberOfRows)
+			{
+				IList<int> attribute_list = ItemAttributes.GetEntriesByRow(item_id);
+				if(attribute_list.Count > 0)
+				{
+					double sum = 0;
+					double second_norm_denominator = attribute_list.Count;
+					foreach(int attribute_id in attribute_list) 
+					{
+						sum += main_metadata[attribute_id];
+					}
+					result += sum / second_norm_denominator;
+				}
+			}
+			
+			for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+			{
+				if(item_id < AdditionalItemAttributes[g].NumberOfRows)
+				{
+					IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(item_id);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += second_metadata[g][attribute_id];
 						}
 						result += sum / second_norm_denominator;
 					}
