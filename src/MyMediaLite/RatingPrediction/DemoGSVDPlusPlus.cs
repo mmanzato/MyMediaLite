@@ -62,6 +62,14 @@ namespace MyMediaLite.RatingPrediction
 		/// <summary>Secondary biases</summary>
 		protected List<float[]> second_demo;
 		
+		/// <summary>Main metadata biases</summary>
+		protected float[] main_metadata;
+		
+		/// <summary>Secondary biases</summary>
+		protected List<float[]> second_metadata;
+		
+		
+		
 		///
 		protected Matrix<float>[] h;
 		
@@ -84,6 +92,14 @@ namespace MyMediaLite.RatingPrediction
 				float[] element = new float[additional_user_attributes[d].NumberOfColumns];			
 				second_demo.Add(element);
 			}	
+			
+			main_metadata = new float[item_attributes.NumberOfColumns];
+			second_metadata = new List<float[]>(AdditionalItemAttributes.Count);
+			for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+			{
+				float[] element = new float[AdditionalItemAttributes[g].NumberOfColumns];			
+				second_metadata.Add(element);
+			}
 			
 			h = new Matrix<float>[AdditionalUserAttributes.Count + 1];
 			h[0] = new Matrix<float>(UserAttributes.NumberOfColumns, ItemAttributes.NumberOfColumns);
@@ -145,6 +161,39 @@ namespace MyMediaLite.RatingPrediction
 						}
 					}	
 				}
+				
+				if(i < ItemAttributes.NumberOfRows)
+				{
+					IList<int> attribute_list = ItemAttributes.GetEntriesByRow(i);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += main_metadata[attribute_id];
+						}
+						prediction += sum / second_norm_denominator;
+					}
+				}
+				
+				for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+				{
+					if(i < AdditionalItemAttributes[g].NumberOfRows)
+					{
+						IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(i);
+						if(attribute_list.Count > 0)
+						{
+							double sum = 0;
+							double second_norm_denominator = attribute_list.Count;
+							foreach(int attribute_id in attribute_list) 
+							{
+								sum += second_metadata[g][attribute_id];
+							}
+							prediction += sum / second_norm_denominator;
+						}
+					}
+				}					
 				
 				if (u < UserAttributes.NumberOfRows && i < ItemAttributes.NumberOfRows)
 				{
@@ -210,7 +259,7 @@ namespace MyMediaLite.RatingPrediction
 				if (update_item)
 					item_bias[i] += BiasLearnRate * current_learnrate * ((float) err - BiasReg * item_reg_weight * item_bias[i]);
 				
-				// adjust attributes
+				// adjust user attributes
 				if(u < user_attributes.NumberOfRows)
 				{
 					IList<int> attribute_list = user_attributes.GetEntriesByRow(u);
@@ -239,6 +288,34 @@ namespace MyMediaLite.RatingPrediction
 							foreach (int attribute_id in attribute_list)
 							{							
 								second_demo[d][attribute_id] += BiasLearnRate * current_learnrate * ((float) second_norm_error - BiasReg * reg * second_demo[d][attribute_id]);
+							}
+						}
+					}	
+				}
+				
+				// adjust item attributes
+				if(i < ItemAttributes.NumberOfRows)
+				{
+					IList<int> attribute_list = ItemAttributes.GetEntriesByRow(i);
+					if(attribute_list.Count > 0)
+					{
+						foreach (int attribute_id in attribute_list)
+						{							
+							main_metadata[attribute_id] += BiasLearnRate * current_learnrate * ((float)err - BiasReg * Regularization * main_metadata[attribute_id]);
+						}
+					}
+				}
+				
+				for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+				{
+					if(i < AdditionalItemAttributes[g].NumberOfRows)
+					{
+						IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(i);
+						if(attribute_list.Count > 0)
+						{
+							foreach (int attribute_id in attribute_list)
+							{
+								second_metadata[g][attribute_id] += BiasLearnRate * current_learnrate * ((float)err - BiasReg * Regularization * second_metadata[g][attribute_id]);								
 							}
 						}
 					}	
@@ -368,6 +445,39 @@ namespace MyMediaLite.RatingPrediction
 						foreach(int attribute_id in attribute_list) 
 						{
 							sum += second_demo[d][attribute_id];
+						}
+						result += sum / second_norm_denominator;
+					}
+				}	
+			}
+			
+			if(item_id < ItemAttributes.NumberOfRows)
+			{
+				IList<int> attribute_list = ItemAttributes.GetEntriesByRow(item_id);
+				if(attribute_list.Count > 0)
+				{
+					double sum = 0;
+					double second_norm_denominator = attribute_list.Count;
+					foreach(int attribute_id in attribute_list) 
+					{
+						sum += main_metadata[attribute_id];
+					}
+					result += sum / second_norm_denominator;
+				}
+			}
+			
+			for(int g = 0; g < AdditionalItemAttributes.Count; g++)
+			{
+				if(item_id < AdditionalItemAttributes[g].NumberOfRows)
+				{
+					IList<int> attribute_list = AdditionalItemAttributes[g].GetEntriesByRow(item_id);
+					if(attribute_list.Count > 0)
+					{
+						double sum = 0;
+						double second_norm_denominator = attribute_list.Count;
+						foreach(int attribute_id in attribute_list) 
+						{
+							sum += second_metadata[g][attribute_id];
 						}
 						result += sum / second_norm_denominator;
 					}

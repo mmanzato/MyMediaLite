@@ -38,7 +38,7 @@ class RatingBasedRanking : RatingPrediction
 
 	public RatingBasedRanking()
 	{
-		eval_measures = new string[] { "AUC", "prec@5" };
+		eval_measures = new string[] { "AUC", "prec@5", "prec@10", "recall@5", "recall@10", "MAP"};
 	}
 
 	protected override void ShowVersion()

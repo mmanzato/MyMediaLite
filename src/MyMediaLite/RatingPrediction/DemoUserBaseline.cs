@@ -102,7 +102,7 @@ namespace MyMediaLite.RatingPrediction
 		protected internal override void InitModel()
 		{
 			base.InitModel();
-
+			
 			main_demo = new float[user_attributes.NumberOfColumns];
 			second_demo = new List<float[]>(additional_user_attributes.Count);
 			for(int d = 0; d < additional_user_attributes.Count; d++)
@@ -118,6 +118,17 @@ namespace MyMediaLite.RatingPrediction
 				float[] element = new float[additional_item_attributes[g].NumberOfColumns];			
 				second_metadata.Add(element);
 			}
+		}
+		
+		///
+		public override void Train()
+		{
+			InitModel();
+			
+			global_bias = ratings.Average;
+
+			for (int current_iter = 0; current_iter < NumIter; current_iter++)
+				Iterate();
 		}
 		
 		///

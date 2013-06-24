@@ -26,6 +26,9 @@ using System.Linq;
 
 namespace MyMediaLite.RatingPrediction
 {
+	/// <summary>
+	/// Demo user item att.
+	/// </summary>
 	public class DemoUserItemAtt : DemoUserBaseline
 	{
 		///
