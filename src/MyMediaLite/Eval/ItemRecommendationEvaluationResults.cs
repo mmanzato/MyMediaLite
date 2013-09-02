@@ -32,7 +32,7 @@ namespace MyMediaLite.Eval
 		/// </summary>
 		static public IList<string> DefaultMeasuresToShow
 		{
-			get { return new string[] { "AUC", "prec@5" }; }
+			get { return new string[] { "AUC", "prec@5", "prec@10", "MAP", "recall@5", "recall@10", "NDCG", "MRR"  }; }
 		}
 
 		/// <summary>default constructor</summary>

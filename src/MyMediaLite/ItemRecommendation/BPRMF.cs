@@ -89,6 +89,11 @@ namespace MyMediaLite.ItemRecommendation
 		/// <summary>Learning rate alpha</summary>
 		protected float learn_rate = 0.05f;
 
+		/// <summary>Learning rate alpha</summary>
+		public float Decay { get { return decay; } set { decay = value; } }
+		/// <summary>Learning rate alpha</summary>
+		protected float decay = 1.0f;
+
 		/// <summary>Regularization parameter for user factors</summary>
 		public float RegU { get { return reg_u; } set { reg_u = value; } }
 		/// <summary>Regularization parameter for user factors</summary>
@@ -186,6 +191,8 @@ namespace MyMediaLite.ItemRecommendation
 				else
 					IterateWithoutReplacementUniformPair();
 			}
+
+			learn_rate *= Decay;
 		}
 
 		/// <summary>

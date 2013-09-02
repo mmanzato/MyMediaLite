@@ -10,7 +10,6 @@
     <RootNamespace>MyMediaLite</RootNamespace>
     <AssemblyName>MyMediaLite</AssemblyName>
     <ReleaseVersion>3.06</ReleaseVersion>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -251,6 +250,11 @@
     <Compile Include="RatingPrediction\DemoSVD.cs" />
     <Compile Include="RatingPrediction\DemoMFUserItemAtt.cs" />
     <Compile Include="RatingPrediction\DemoSVDPlusPlus.cs" />
+    <Compile Include="ItemRecommendation\MatrixFactorization.cs" />
+    <Compile Include="RatingPrediction\SocialUserBaselineMF.cs" />
+    <Compile Include="RatingPrediction\SocialUserBaseline.cs" />
+    <Compile Include="ItemRecommendation\BPR_GSVDPlusPlus.cs" />
+    <Compile Include="ItemRecommendation\BPRMFAttr.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)/Microsoft.CSharp.targets" />
   <ItemGroup>

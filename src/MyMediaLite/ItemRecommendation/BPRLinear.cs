@@ -71,7 +71,16 @@ namespace MyMediaLite.ItemRecommendation
 		///
 		public int NumItemAttributes { get; private set; }
 
-		// Item attribute weights
+		/// <summary>
+		/// The item_attribute_weight_by_user.
+		/// </summary>
+		public Matrix<float> ItemAttributeWeights
+		{
+			get { return this.item_attribute_weight_by_user; }
+			set {
+				this.item_attribute_weight_by_user = value;
+			}
+		}
 		private Matrix<float> item_attribute_weight_by_user;
 
 		private System.Random random;
