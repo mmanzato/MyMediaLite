@@ -212,8 +212,8 @@ namespace MyMediaLite.ItemRecommendation
 		/// </param>
 		protected override void SampleItemPair(int user_id, out int item_id, out int other_item_id)
 		{
-			SampleAnyItemPair(user_id, out item_id, out other_item_id);
-			return;
+			//SampleAnyItemPair(user_id, out item_id, out other_item_id);
+			//return;
 			var user_items = Feedback.UserMatrix [user_id];
 			item_id = user_items.ElementAt (random.Next (user_items.Count));
 
@@ -248,9 +248,16 @@ namespace MyMediaLite.ItemRecommendation
 				}
 				if(attrList.Count > 0) sum2 /= attrList.Count;
 				else sum2 = 0;
-
-				if(sum1 > sum2)
-					return;
+				
+				if(Math.Abs(sum1-sum2) < 2.5)
+					continue;
+				
+				if(sum1 < sum2) {
+					int aux = item_id;
+					item_id = other_item_id;
+					other_item_id = aux;
+				}
+				return;
 			}
 		}
 
@@ -274,20 +281,24 @@ namespace MyMediaLite.ItemRecommendation
 
 			if (item_id < item_attributes.NumberOfRows) {
 				IList<int> attribute_list = item_attributes.GetEntriesByRow (item_id);
-				double second_norm_denominator = (attribute_list.Count > 0) ? attribute_list.Count : 1;
-				var x_sum_vector = x.SumOfRows (attribute_list);
-				for (int f = 0; f < x_sum_vector.Count; f++)
-					q_plus_x_sum_vector [f] += (float)(x_sum_vector [f] / second_norm_denominator);
+				double second_norm_denominator = attribute_list.Count;
+				if(second_norm_denominator > 0) {
+					var x_sum_vector = x.SumOfRows (attribute_list);
+					for (int f = 0; f < x_sum_vector.Count; f++)
+						q_plus_x_sum_vector [f] += (float)(x_sum_vector [f] / second_norm_denominator);
+				}
 			}
 
 			var other_q_plus_x_sum_vector = q.GetRow (other_item_id);
 
 			if (other_item_id < item_attributes.NumberOfRows) {
 				IList<int> attribute_list = item_attributes.GetEntriesByRow (other_item_id);
-				double second_norm_denominator = (attribute_list.Count > 0) ? attribute_list.Count : 1;
-				var x_sum_vector = x.SumOfRows (attribute_list);
-				for (int f = 0; f < x_sum_vector.Count; f++)
-					other_q_plus_x_sum_vector [f] += (float)(x_sum_vector [f] / second_norm_denominator);
+				double second_norm_denominator = attribute_list.Count;
+				if(second_norm_denominator > 0) {
+					var x_sum_vector = x.SumOfRows (attribute_list);
+					for (int f = 0; f < x_sum_vector.Count; f++)
+						other_q_plus_x_sum_vector [f] += (float)(x_sum_vector [f] / second_norm_denominator);
+				}
 			}
 
 			double dotProductDiff = 0;
@@ -351,7 +362,7 @@ namespace MyMediaLite.ItemRecommendation
 				{
 					double update = u_f * one_over_one_plus_ex - reg_i * q_f;
 					q[item_id, f] = (float)(q_f + learn_rate * update);
-
+					
 					foreach (int other_y in items_rated_by_user)
 					{
 						double delta = (i_f - j_f) * normalized_error - y_reg[other_y] * y_f[other_y];
@@ -404,8 +415,9 @@ namespace MyMediaLite.ItemRecommendation
 
 			if (item_factors == null)
 				PrecomputeItemFactors();
-
-			return item_bias[item_id] + DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+			
+			float predicted = item_bias[item_id] + DataType.MatrixExtensions.RowScalarProduct(user_factors, user_id, item_factors, item_id);
+			return predicted;
 		}
 
 		/// <summary>Precompute all item factors</summary>
@@ -428,15 +440,18 @@ namespace MyMediaLite.ItemRecommendation
 			{
 				IList<int> attribute_list = item_attributes.GetEntriesByRow(item_id);
 				double second_norm_denominator = attribute_list.Count;
-				var x_sum_vector = x.SumOfRows(attribute_list);
-				for (int f = 0; f < x_sum_vector.Count; f++)
-					factors[f] += (float) (x_sum_vector[f] / second_norm_denominator);
+				
+				// o if abaixo, se retirado com a base ML, retorna melhores resultados. Com outras bases deve-se mante-lo.
+				if(second_norm_denominator > 0) {
+					var x_sum_vector = x.SumOfRows(attribute_list);
+					for (int f = 0; f < x_sum_vector.Count; f++)
+						factors[f] += (float) (x_sum_vector[f] / second_norm_denominator);
+				}
 			}
 
 			// assign
 			for (int f = 0; f < NumFactors; f++) {
 				item_factors [item_id, f] = (float)factors[f];
-				//item_factors [item_id, f] = (float)q[item_id, f];
 			}
 		}
 

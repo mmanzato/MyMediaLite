@@ -113,6 +113,7 @@ namespace MyMediaLite.ItemRecommendation
 		/// </param>
 		protected override void SampleItemPair(int user_id, out int item_id, out int other_item_id)
 		{
+			//SampleAnyItemPair(user_id, out item_id, out other_item_id);
 			//base.SampleItemPair(user_id, out item_id, out other_item_id);
 			//return;
 			var user_items = Feedback.UserMatrix [user_id];
@@ -130,7 +131,8 @@ namespace MyMediaLite.ItemRecommendation
 			foreach (int g in attrList) {
 				sum1 += item_attribute_weight_by_user[user_id, g];//weights [user_id, g];
 			}
-			sum1 /= attrList.Count;
+			if(attrList.Count > 0) sum1 /= attrList.Count;
+			else sum1 = 0;
 
 			while(true) {
 				other_item_id = random.Next(MaxItemID + 1);
@@ -146,10 +148,18 @@ namespace MyMediaLite.ItemRecommendation
 				foreach(int g in attrList) {
 					sum2 += item_attribute_weight_by_user[user_id, g];//weights[user_id, g];
 				}
-				sum2 /= attrList.Count;
-
-				if(sum1 > sum2)
-					return;
+				if(attrList.Count > 0) sum2 /= attrList.Count;
+				else sum2 = 0;
+				
+				if(Math.Abs(sum1-sum2) < 2.5)
+					continue;
+				
+				if(sum1 < sum2) {
+					int aux = item_id;
+					item_id = other_item_id;
+					other_item_id = aux;
+				}
+				return;				
 			}
 		}
 
